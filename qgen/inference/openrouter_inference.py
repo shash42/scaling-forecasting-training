@@ -23,7 +23,7 @@ class OpenRouterInference(BaseInference):
     """OpenRouter-based inference engine"""
     
     def __init__(self, model: str, max_tokens: int = 2048, temperature: float = 0.7,
-                 concurrency: int = 200):
+                 concurrency: int = 200, require_answer_tags: bool = None):
         """
         Initialize OpenRouter inference engine
         
@@ -32,9 +32,11 @@ class OpenRouterInference(BaseInference):
             max_tokens: Maximum tokens for generation
             temperature: Temperature for generation
             concurrency: Max concurrent in-flight requests (default 200)
+            require_answer_tags: Override tag checking for non-XML output formats
         """
         self.model = model
         self.max_tokens = max_tokens
+        self.require_answer_tags = require_answer_tags
         
         if "r1" in model or "qwen3" in model or "openai" in model or "2.5" in model or "pro" in model or "flash" in model or "grok" in model or "kimi" in model:
             self.temperature = 0.6
@@ -123,6 +125,8 @@ class OpenRouterInference(BaseInference):
                     if prompt:
                         prompt_text = prompt if isinstance(prompt, str) else prompt[-1]['content']
                         answer_tags_required = "<answer>" in prompt_text
+                    if self.require_answer_tags is not None:
+                        answer_tags_required = self.require_answer_tags
                     
                     if content is not None and len(content) > 0:  # Check if content is actually present
                         reasoning = message.get("reasoning", "")

@@ -71,6 +71,41 @@ The existing binary validator, best-question selector, and leakage rewriter are
 retained and preserve the explicit dates. Older questions without date tags still
 use the existing date-processing path.
 
+### Optional feedback generation workflow
+
+An alternative command uses shared numbered generation criteria and a verifier
+that returns all violated IDs plus a short explanation. With `--revise`, if every
+candidate has violations, it revises the candidate with the fewest violations
+(breaking ties by lowest ID) once. The generator can repair it or replace it
+with a different question grounded in the same document. The verifier then
+checks every criterion again. Each model continues its own original conversation.
+
+```bash
+python -m qgen.scripts.generate_with_feedback \
+    --article_path articles.jsonl \
+    --output_path feedback/documents.jsonl \
+    --creator_model deepseek/deepseek-chat-v3-0324 \
+    --verifier_model meta-llama/llama-4-maverick \
+    --num_q_per_article 3 --revise
+```
+
+This workflow lives in `qgen/feedback/` and uses its original
+`<question id="1">` XML schema, with explicit dates. The worked example is enabled
+by default here; use `--no_fewshot` to omit it. It does not call the binary
+validator, best-question selector, or leakage rewriter. The existing generation
+command and end-to-end pipeline continue to use those stages.
+
+The output contains document records with `candidates`, original questions and
+verification reports, and a nested `revision` with both conversations, responses,
+and status. A candidate passes when its verification has an empty `violations`
+list; use the revision's question and report when its status is `completed`.
+An accepted original candidate or an incomplete/failed initial verification
+skips revision. Completed and failed attempts are not repeated on resume; an
+interrupted attempt resumes from the saved revision before re-verification.
+Errors remain recorded alongside the original question. Reuse the output path
+only with the same articles, models, and settings; to enable revision later,
+rerun the same command with `--revise`.
+
 ### Optional quality checks
 
 These checks run separately on standardized questions, after generation and the
